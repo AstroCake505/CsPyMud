@@ -13,5 +13,5 @@ Global
 		{F7962F07-14B2-4AC7-AA86-1EECDB78EBF5}.Debug|x86.Build.0 = Debug|x86
 		{F7962F07-14B2-4AC7-AA86-1EECDB78EBF5}.Release|x86.ActiveCfg = Release|x86
 		{F7962F07-14B2-4AC7-AA86-1EECDB78EBF5}.Release|x86.Build.0 = Release|x86
-	EndGlobalSection
+	EndGlobalSection pog
 EndGlobal
