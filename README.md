@@ -1,4 +1,4 @@
 # CsPyMud
-A bizarre C# MUD driver for worlds scripted in Python 
-me
+A bizarre C# MUD driver for worlds scripted in Python
 reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+me
