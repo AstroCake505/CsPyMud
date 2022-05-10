@@ -58,11 +58,10 @@ namespace CsPyMudServer
         /// Initializes a new instance of the <see cref="T:CsPyMudServer.AuthenticationConversation"/> class.
         /// </summary>
         /// <param name="_connection">Connection.</param>
-        public AuthenticationConversation(Connection _connection) : base(_connection)
+        public AuthenticationConversation(Connection _connection, CompleteHandler _handler) 
+            : base(_connection, _handler)
         {
             IsAuthenticated = false;
-
-
         }
 
         /// <summary>
@@ -70,8 +69,8 @@ namespace CsPyMudServer
         /// </summary>
         public override void Start()
         {
-            connection.MessageHandler = this.HandleUsername;
-            connection.SendMessage("USERNAME: ");
+            Stream.MessageHandler = this.HandleUsername;
+            Stream.SendMessage("USERNAME: ");
         }
 
         /// <summary>
@@ -81,16 +80,16 @@ namespace CsPyMudServer
         /// <c>false</c> otherwise.</returns>
         public bool IsAuthenticated;
 
-        /// <summary>
-        /// Returns <see langword="true"/> if authentication has failed
-        /// (i.e. too many failed attempts)
-        /// </summary>
-        /// <returns><c>true</c>, if username/password authentication has failed,
-        /// <c>false</c> otherwise.</returns>
-        public bool IsFailed()
-        {
-            return false;
-        }
+        ///// <summary>
+        ///// Returns <see langword="true"/> if authentication has failed
+        ///// (i.e. too many failed attempts)
+        ///// </summary>
+        ///// <returns><c>true</c>, if username/password authentication has failed,
+        ///// <c>false</c> otherwise.</returns>
+        //public bool IsFailed()
+        //{
+        //    return false;
+        //}
 
         //====================================================================
         // Message handlers
@@ -100,15 +99,16 @@ namespace CsPyMudServer
             // need to store the username from the message for checking
             // password in HandlePassword()
 
-            connection.MessageHandler = this.HandlePassword;
-            connection.SendMessage("PASSWORD: ");
+            Stream.MessageHandler = this.HandlePassword;
+            Stream.SendMessage("PASSWORD: ");
         }
 
         private void HandlePassword(string message)
         {
             // should probably actually do some checking of the password here...
-
+            Stream.SendMessage("Login successful.");
             IsAuthenticated = true;
+            completeHandler(this);
         }
     }
 }

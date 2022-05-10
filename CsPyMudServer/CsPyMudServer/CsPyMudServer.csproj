@@ -30,6 +30,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Json" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Server.cs" />
@@ -37,16 +38,25 @@
     <Compile Include="ConnectionListener.cs" />
     <Compile Include="WorldManager.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="Connection.cs" />
+    <Compile Include="MessageStream.cs" />
     <Compile Include="Conversation.cs" />
     <Compile Include="AuthenticationConversation.cs" />
     <Compile Include="PlayingConversation.cs" />
     <Compile Include="CharacterSelectConversation.cs" />
-    <Compile Include="PlayerStatus.cs" />
+    <Compile Include="Connection.cs" />
+    <Compile Include="Character.cs" />
+    <Compile Include="Enemy.cs" />
+    <Compile Include="Item.cs" />
+    <Compile Include="Player.cs" />
+    <Compile Include="Weapon.cs" />
+    <Compile Include="Room.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="mudserver.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Rooms.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

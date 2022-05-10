@@ -7,18 +7,16 @@ namespace CsPyMudServer
     public class ConnectionManager
     {
         private ConnectionListener connectionListener;
-        private List<AuthenticationConversation> authenticatingConversations;
-        private List<CharacterSelectConversation> charSelectConversations;
-        private List<PlayingConversation> playingConversations;
+        private WorldManager worldManager;
+        private List<Connection> connectionList;
 
-        public ConnectionManager(   ConnectionListener _connectionListener,
+        public ConnectionManager(ConnectionListener _connectionListener,
                                     WorldManager _worldManager
             )
         {
             connectionListener = _connectionListener;
-            authenticatingConversations = new List<AuthenticationConversation>();
-            charSelectConversations = new List<CharacterSelectConversation>();
-            playingConversations = new List<PlayingConversation>();
+            worldManager = _worldManager;
+            connectionList = new List<Connection>();
         }
 
         public void Startup()
@@ -35,52 +33,91 @@ namespace CsPyMudServer
         {
             // get new connections from connectionListener...
             // ...and kick off Authentication conversations
-            Connection newConnection = connectionListener.GetNewConnection();
-            while (newConnection != null)
+            MessageStream incomingStream = connectionListener.GetNewConnection();
+            while (incomingStream != null)
             {
-                Console.WriteLine("New connection from {0}", newConnection.ClientIPAddress);
+                Console.WriteLine("New connection from {0}", incomingStream.ClientIPAddress);
 
-                AuthenticationConversation conversation = new AuthenticationConversation(newConnection);
-                conversation.Start();
-                authenticatingConversations.Add(conversation);
+                // create new Connection instance to hold info about player
+                Connection newConnection = new Connection(incomingStream);
 
-                newConnection = connectionListener.GetNewConnection();
+                // create and start Authentication conversation to challenge
+                // for username/password
+                AuthenticationConversation conversation =
+                    new AuthenticationConversation(
+                        newConnection,
+                        (conv) => this.HandleAuthenticationComplete(newConnection)
+                    );
+                newConnection.Conversation = conversation;
+
+                // add connection to live list
+                connectionList.Add(newConnection);
+
+                // check if there's another incoming connection to process
+                incomingStream = connectionListener.GetNewConnection();
             }
+        }
 
-            // loop through all Authentication conversations...
-            for (int connIndex = authenticatingConversations.Count-1; connIndex >= 0; connIndex--)
+        /// <summary>
+        /// Handler for when the authentication process is complete
+        /// (whether it passes or fails)
+        /// </summary>
+        /// <param name="connection">Connection.</param>
+        private void HandleAuthenticationComplete(Connection connection)
+        {
+            AuthenticationConversation authConv = (AuthenticationConversation)connection.Conversation;
+            if (authConv.IsAuthenticated)
             {
-                AuthenticationConversation conv = authenticatingConversations[connIndex];
-                // ...and if authentication has finished...
-                if (conv.IsAuthenticated)
-                {
-                    // ...transfer them over to Playing conversations
-                    authenticatingConversations.RemoveAt(connIndex);
+                CharacterSelectConversation newConv =
+                    new CharacterSelectConversation(
+                        connection,
+                        (conv) => this.HandleCharacterSelectComplete(connection)
+                    );
 
-                    CharacterSelectConversation newConversation = new CharacterSelectConversation(conv.Connection);
-                    newConversation.Start();
-                    charSelectConversations.Add(newConversation);
-                }
+                connection.Conversation = newConv;
             }
-
-            // loop through all Character Select conversations...
-            // (feels like there should be a better way of doing this...)
-            for (int connIndex = charSelectConversations.Count - 1; connIndex >= 0; connIndex--)
+            else
             {
-                CharacterSelectConversation conv = charSelectConversations[connIndex];
-                // ...and if authentication has finished...
-                if (conv.chosenCharacter != CharacterSelectConversation.INVALID_CHAR)
-                {
-                    // ...transfer them over to Playing conversations
-                    charSelectConversations.RemoveAt(connIndex);
-
-                    PlayingConversation newConversation = new PlayingConversation(conv.Connection);
-                    newConversation.player.CharName = conv.GetCharName();
-                    newConversation.Start();
-                    playingConversations.Add(newConversation);
-                }
+                connection.Close();
+                connectionList.Remove(connection);
             }
+        }
 
+        /// <summary>
+        /// Handler for when the character selection conversation is complete
+        /// </summary>
+        /// <param name="connection">Connection.</param>
+        private void HandleCharacterSelectComplete(Connection connection)
+        {
+            CharacterSelectConversation charSelConv =
+                (CharacterSelectConversation)connection.Conversation;
+
+            // for now, just create an empty character with the chosen name.
+            // should really load character from some kind of database...
+            Player currPlayer = new Player();
+            currPlayer.character = new Character();
+            currPlayer.character.name = charSelConv.GetCharName();
+            connection.SetData("PLAYER", currPlayer);
+
+            PlayingConversation newConv =
+                new PlayingConversation(
+                    connection,
+                    (conv) => this.HandlePlayingComplete(connection),
+                    worldManager
+                );
+
+
+            connection.Conversation = newConv;
+        }
+
+        /// <summary>
+        /// Handler for when the user exits the game
+        /// </summary>
+        /// <param name="connection">Connection.</param>
+        private void HandlePlayingComplete(Connection connection)
+        {
+            connection.Close();
+            connectionList.Remove(connection);
         }
     }
 }

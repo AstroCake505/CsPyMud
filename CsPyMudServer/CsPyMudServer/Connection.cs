@@ -1,73 +1,64 @@
 ﻿using System;
-using System.Net;
-using System.Net.Security;
-using System.Text;
+using System.Collections.Generic;
 
 namespace CsPyMudServer
 {
-    public delegate void MessageHandler(string message);
 
     /// <summary>
-    /// Class to translate string messages into binary stream messages
+    /// Connection.
+    /// Keeps track of everything associated with a player's connection to the
+    /// server
     /// </summary>
     public class Connection
     {
-        private const int READ_BUFFER_SIZE = 4096; 
+        private MessageStream inStream;
+        private Conversation currentConversation;
+        private Dictionary<string, object> dataDict;
 
-        private SslStream sslStream;
-        private IPAddress clientAddress;
-
-        private byte[] readBuffer = new byte[READ_BUFFER_SIZE];
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:CsPyMudServer.Connection"/> class.
-        /// </summary>
-        /// <param name="_stream">Stream.</param>
-        /// <param name="_clientAddress">Client address.</param>
-        public Connection(SslStream _stream, IPAddress _clientAddress)
+        public Connection(MessageStream _inStream)
         {
-            sslStream = _stream;
-            clientAddress = _clientAddress;
-
-            sslStream.BeginRead(readBuffer, 0, READ_BUFFER_SIZE, (asyncResult) => this.ForwardIncomingMessage(asyncResult), this);
+            inStream = _inStream;
+            dataDict = new Dictionary<string, object>();
         }
 
-        public IPAddress ClientIPAddress {  get { return clientAddress; } }
-
-        /// <summary>
-        /// Close the connection to the client.
-        /// </summary>
         public void Close()
         {
-            sslStream.Close();
+            inStream.SendMessage("Connection closed by server");
+            inStream.Close();
         }
 
-        /// <summary>
-        /// Set this property to the external method that handles incoming messages
-        /// </summary>
-        public MessageHandler MessageHandler;
-
-        /// <summary>
-        /// Sends a message to the server.
-        /// </summary>
-        /// <param name="message">Message.</param>
-        public void SendMessage(string message)
+        public void SetData(string name, object datum)
         {
-            sslStream.Write(Encoding.ASCII.GetBytes(message));
-        }
-
-        /// <summary>
-        /// Internal callback for passing on stuff we receive from the server
-        /// </summary>
-        /// <param name="result">Result.</param>
-        private void ForwardIncomingMessage(IAsyncResult result)
-        {
-            int byteCount = sslStream.EndRead(result);
-            if (byteCount > 0 && MessageHandler != null)
+            if(dataDict.ContainsKey(name))
             {
-                MessageHandler(Encoding.ASCII.GetString(readBuffer, 0, byteCount));
+                dataDict[name] = datum;
             }
-            sslStream.BeginRead(readBuffer, 0, 4096, (asyncResult) => this.ForwardIncomingMessage(asyncResult), this);
+            else
+            {
+                dataDict.Add(name, datum);
+            }
+        }
+        public object GetData(string name)
+        {
+            object result = null;
+            if(dataDict.ContainsKey(name)) {
+                result = dataDict[name];
+            }
+            return result;
+        }
+        public void ClearData(string name)
+        {
+            if(dataDict.ContainsKey(name))
+            {
+                dataDict.Remove(name);
+            }
+        }
+
+        public MessageStream MessageStream { get { return inStream; } }
+        public Conversation Conversation
+        {
+            get { return currentConversation;  }
+            set { currentConversation = value;  currentConversation.Start();  }
         }
     }
 }
